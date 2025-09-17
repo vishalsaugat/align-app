@@ -24,3 +24,18 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Logo animation */
+@keyframes logoPop {
+  0% { transform: scale(.85) translateY(6px); opacity: 0; filter: blur(4px); }
+  60% { transform: scale(1.02) translateY(0); opacity: 1; filter: blur(0); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fadeInSoft {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.animate-logo-pop { animation: logoPop 700ms cubic-bezier(.16,.8,.24,1) both; }
+.logo-fade-in { animation: fadeInSoft 900ms ease both; }

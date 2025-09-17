@@ -1,0 +1,14 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Align Mark</title>
+  <desc id="desc">Minimal monoline abstract A shape with central circle.</desc>
+  <defs>
+    <linearGradient id="mGrad" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="60%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#9333EA" />
+    </linearGradient>
+  </defs>
+  <path d="M12 52L30 12C31.6 8.6 32.4 8 34 8C35.6 8 36.4 8.6 38 12L56 52H48.5L38.2 28.8C37.3 26.7 36.1 25.8 34 25.8C31.9 25.8 30.7 26.7 29.8 28.8L19.5 52H12Z" fill="url(#mGrad)" />
+  <circle cx="34" cy="38" r="6" fill="white" />
+  <circle cx="34" cy="38" r="4" fill="url(#mGrad)" />
+</svg>
