@@ -1,44 +1,49 @@
-import { Pool } from 'pg';
+import { PrismaClient } from '@prisma/client';
 
-const connectionString = process.env.POSTGRES_URL;
-if (!connectionString) throw new Error('POSTGRES_URL is not defined in environment');
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
 
-interface GlobalWithPool {
-  __alignPool?: Pool;
-}
+export const prisma =
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: ['error', 'warn'],
+  });
 
-const globalWithPool = globalThis as GlobalWithPool;
-
-export const pool: Pool = globalWithPool.__alignPool ?? new Pool({
-  connectionString,
-  max: 5,
-  idleTimeoutMillis: 30_000,
-});
-
-if (!globalWithPool.__alignPool) {
-  globalWithPool.__alignPool = pool;
-}
-
-export async function ensureWaitlistTable() {
-  await pool.query(`CREATE TABLE IF NOT EXISTS align_waitlist (
-    id SERIAL PRIMARY KEY,
-    email TEXT NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);`);
-}
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 export async function insertWaitlistEmail(email: string) {
-  await ensureWaitlistTable();
-  const result = await pool.query(
-    `INSERT INTO align_waitlist (email) VALUES ($1)
-     ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email
-     RETURNING id, email, created_at;`,
-    [email]
-  );
-  return result.rows[0];
+  try {
+    const result = await prisma.waitlist.upsert({
+      where: { email },
+      update: { email },
+      create: { email },
+      select: {
+        id: true,
+        email: true,
+        createdAt: true,
+      },
+    });
+    return {
+      id: result.id,
+      email: result.email,
+      created_at: result.createdAt,
+    };
+  } catch (error) {
+    console.error('Failed to insert waitlist email:', error);
+    throw error;
+  }
 }
 
 export async function isDuplicate(email: string) {
-  const res = await pool.query('SELECT 1 FROM align_waitlist WHERE email = $1 LIMIT 1', [email]);
-  return (res.rowCount ?? 0) > 0;
+  try {
+    const existing = await prisma.waitlist.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+    return existing !== null;
+  } catch (error) {
+    console.error('Failed to check email duplicate:', error);
+    throw error;
+  }
 }
