@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { insertWaitlistEmail, isDuplicate } from "@/lib/db";
-import { Prisma } from "@prisma/client";
+import { 
+  PrismaClientKnownRequestError,
+  PrismaClientUnknownRequestError,
+  PrismaClientRustPanicError,
+  PrismaClientInitializationError,
+  PrismaClientValidationError
+} from "@prisma/client/runtime/library";
 
 export async function POST(request: Request) {
   try {
@@ -43,13 +49,13 @@ export async function POST(request: Request) {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
       type: error?.constructor?.name,
-      code: error instanceof Prisma.PrismaClientKnownRequestError ? error.code : undefined,
-      meta: error instanceof Prisma.PrismaClientKnownRequestError ? error.meta : undefined,
+      code: error instanceof PrismaClientKnownRequestError ? error.code : undefined,
+      meta: error instanceof PrismaClientKnownRequestError ? error.meta : undefined,
       timestamp: new Date().toISOString(),
     });
 
     // Handle specific Prisma errors
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error instanceof PrismaClientKnownRequestError) {
       switch (error.code) {
         case 'P2002':
           console.warn('Waitlist API: Unique constraint violation (duplicate email)');
@@ -63,22 +69,22 @@ export async function POST(request: Request) {
       }
     }
 
-    if (error instanceof Prisma.PrismaClientUnknownRequestError) {
+    if (error instanceof PrismaClientUnknownRequestError) {
       console.error('Waitlist API: Unknown database error');
       return NextResponse.json({ error: "Database connection error" }, { status: 500 });
     }
 
-    if (error instanceof Prisma.PrismaClientRustPanicError) {
+    if (error instanceof PrismaClientRustPanicError) {
       console.error('Waitlist API: Database engine panic');
       return NextResponse.json({ error: "Database engine error" }, { status: 500 });
     }
 
-    if (error instanceof Prisma.PrismaClientInitializationError) {
+    if (error instanceof PrismaClientInitializationError) {
       console.error('Waitlist API: Database initialization error');
       return NextResponse.json({ error: "Database initialization error" }, { status: 500 });
     }
 
-    if (error instanceof Prisma.PrismaClientValidationError) {
+    if (error instanceof PrismaClientValidationError) {
       console.error('Waitlist API: Database validation error');
       return NextResponse.json({ error: "Invalid request data" }, { status: 400 });
     }
