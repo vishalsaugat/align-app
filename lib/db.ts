@@ -24,7 +24,7 @@ export async function ensureWaitlistTable() {
     id SERIAL PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-  );`);
+);`);
 }
 
 export async function insertWaitlistEmail(email: string) {
