@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,10 +7,198 @@ datasource db {
   url      = env("POSTGRES_URL")
 }
 
+model User {
+  id               Int                @id @default(autoincrement())
+  name             String?            @db.VarChar(100)
+  email            String             @unique(map: "users_email_unique") @db.VarChar(255)
+  passwordHash     String             @map("password_hash")
+  role             String             @default("member") @db.VarChar(20)
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  deletedAt        DateTime?          @map("deleted_at") @db.Timestamp(6)
+  activity_logs    activity_logs[]
+  companies        companies[]
+  invitations      invitations[]
+  job_descriptions job_descriptions[]
+  settings         settings[]
+  team_members     team_members[]
+
+  @@map("users")
+}
+
 model Waitlist {
   id        Int      @id @default(autoincrement())
   email     String   @unique
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@map("align_waitlist")
+}
+
+model activity_logs {
+  id         Int      @id @default(autoincrement())
+  team_id    Int
+  user_id    Int?
+  action     String
+  timestamp  DateTime @default(now()) @db.Timestamp(6)
+  ip_address String?  @db.VarChar(45)
+  teams      teams    @relation(fields: [team_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_logs_team_id_teams_id_fk")
+  users      User?    @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "activity_logs_user_id_users_id_fk")
+}
+
+model auto_dialer_queue {
+  id                Int                 @id @default(autoincrement())
+  type              String              @default("new") @db.VarChar(50)
+  candidate_id      Int
+  status            String              @default("pending") @db.VarChar(20)
+  created_at        DateTime            @default(now()) @db.Timestamp(6)
+  candidates        candidates          @relation(fields: [candidate_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auto_dialer_queue_candidate_id_candidates_id_fk")
+  auto_dialer_steps auto_dialer_steps[]
+}
+
+model auto_dialer_steps {
+  id                   Int                @id @default(autoincrement())
+  step                 String             @db.VarChar(50)
+  step_entity_id       Int
+  auto_dialer_queue_id Int?
+  status               String             @default("pending") @db.VarChar(20)
+  created_at           DateTime           @default(now()) @db.Timestamp(6)
+  scheduled_time       DateTime?          @db.Timestamp(6)
+  auto_dialer_queue    auto_dialer_queue? @relation(fields: [auto_dialer_queue_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "auto_dialer_steps_auto_dialer_queue_id_auto_dialer_queue_id_fk")
+}
+
+model calls {
+  id               Int              @id @default(autoincrement())
+  candidate_id     Int
+  job_id           Int
+  status           String           @default("pending") @db.VarChar(20)
+  created_at       DateTime         @default(now()) @db.Timestamp(6)
+  key              String           @db.VarChar(10)
+  metadata         Json             @default("[]") @db.Json
+  direction        String           @default("outbound") @db.VarChar(10)
+  transcript       Json             @default("[]") @db.Json
+  candidates       candidates       @relation(fields: [candidate_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "calls_candidate_id_candidates_id_fk")
+  job_descriptions job_descriptions @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "calls_job_id_job_descriptions_id_fk")
+}
+
+model candidates {
+  id                Int                 @id @default(autoincrement())
+  name              String              @db.VarChar(100)
+  email             String              @db.VarChar(255)
+  phone             String              @db.VarChar(11)
+  resume            String
+  created_at        DateTime            @default(now()) @db.Timestamp(6)
+  job_id            Int?
+  status            String              @default("added") @db.VarChar(100)
+  auto_dialer_queue auto_dialer_queue[]
+  calls             calls[]
+  job_descriptions  job_descriptions?   @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "candidates_job_id_job_descriptions_id_fk")
+  interviews        interviews[]
+  whatsapp_messages whatsapp_messages[]
+}
+
+model companies {
+  id               Int                @id @default(autoincrement())
+  name             String             @db.VarChar(100)
+  description      String
+  created_at       DateTime           @default(now()) @db.Timestamp(6)
+  user_id          Int?
+  users            User?              @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "companies_user_id_users_id_fk")
+  job_descriptions job_descriptions[]
+}
+
+model demo_calls {
+  id         Int      @id @default(autoincrement())
+  key        String   @db.VarChar(10)
+  otp        String   @db.VarChar(6)
+  to_number  String   @db.VarChar(20)
+  persona    String   @db.VarChar(50)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  transcript Json     @default("[]") @db.Json
+  metadata   Json     @default("[]") @db.Json
+}
+
+model interviews {
+  id               Int              @id @default(autoincrement())
+  candidate_id     Int
+  job_id           Int
+  date             DateTime         @db.Timestamp(6)
+  time             DateTime         @db.Timestamp(6)
+  created_at       DateTime         @default(now()) @db.Timestamp(6)
+  candidates       candidates       @relation(fields: [candidate_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "interviews_candidate_id_candidates_id_fk")
+  job_descriptions job_descriptions @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "interviews_job_id_job_descriptions_id_fk")
+}
+
+model invitations {
+  id         Int      @id @default(autoincrement())
+  team_id    Int
+  email      String   @db.VarChar(255)
+  role       String   @db.VarChar(50)
+  invited_by Int
+  invited_at DateTime @default(now()) @db.Timestamp(6)
+  status     String   @default("pending") @db.VarChar(20)
+  users      User     @relation(fields: [invited_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "invitations_invited_by_users_id_fk")
+  teams      teams    @relation(fields: [team_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "invitations_team_id_teams_id_fk")
+}
+
+model job_descriptions {
+  id                Int                 @id @default(autoincrement())
+  user_id           Int
+  company_id        Int
+  title             String              @db.VarChar(100)
+  description       String
+  additional_info   String?
+  created_at        DateTime            @default(now()) @db.Timestamp(6)
+  call_instructions String?
+  calls             calls[]
+  candidates        candidates[]
+  interviews        interviews[]
+  companies         companies           @relation(fields: [company_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "job_descriptions_company_id_companies_id_fk")
+  users             User                @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "job_descriptions_user_id_users_id_fk")
+  whatsapp_messages whatsapp_messages[]
+}
+
+model settings {
+  id         Int      @id @default(autoincrement())
+  key        String   @unique(map: "settings_key_unique") @db.VarChar(50)
+  value      String
+  user_id    Int
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  users      User     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "settings_user_id_users_id_fk")
+}
+
+model team_members {
+  id        Int      @id @default(autoincrement())
+  user_id   Int
+  team_id   Int
+  role      String   @db.VarChar(50)
+  joined_at DateTime @default(now()) @db.Timestamp(6)
+  teams     teams    @relation(fields: [team_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "team_members_team_id_teams_id_fk")
+  users     User     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "team_members_user_id_users_id_fk")
+}
+
+model teams {
+  id                     Int             @id @default(autoincrement())
+  name                   String          @db.VarChar(100)
+  created_at             DateTime        @default(now()) @db.Timestamp(6)
+  updated_at             DateTime        @default(now()) @db.Timestamp(6)
+  stripe_customer_id     String?         @unique(map: "teams_stripe_customer_id_unique")
+  stripe_subscription_id String?         @unique(map: "teams_stripe_subscription_id_unique")
+  stripe_product_id      String?
+  plan_name              String?         @db.VarChar(50)
+  subscription_status    String?         @db.VarChar(20)
+  activity_logs          activity_logs[]
+  invitations            invitations[]
+  team_members           team_members[]
+}
+
+model whatsapp_messages {
+  id                  Int              @id @default(autoincrement())
+  job_id              Int
+  candidate_id        Int
+  whatsapp_message_id String           @db.VarChar(100)
+  message             String
+  status              String           @default("PENDING") @db.VarChar(20)
+  created_at          DateTime         @default(now()) @db.Timestamp(6)
+  candidates          candidates       @relation(fields: [candidate_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "whatsapp_messages_candidate_id_candidates_id_fk")
+  job_descriptions    job_descriptions @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "whatsapp_messages_job_id_job_descriptions_id_fk")
 }
