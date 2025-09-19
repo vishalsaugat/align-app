@@ -37,7 +37,7 @@ export default function LoginPage() {
       
       // TODO: Redirect to dashboard after successful login
       setTimeout(() => {
-        window.location.href = "/app/dashboard";
+        window.location.href = "/dashboard";
       }, 1000);
       
     } catch (err: unknown) {
