@@ -1,16 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Logo from "../components/Logo";
 
 type LoginStatus = "idle" | "loading" | "error" | "success";
 
 export default function LoginPage() {
+  const { status: sessionStatus } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<LoginStatus>("idle");
   const [message, setMessage] = useState("");
+  const router = useRouter();
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (sessionStatus === "authenticated") {
+      router.push("/dashboard");
+    }
+  }, [sessionStatus, router]);
+
+  // Show loading state while checking session
+  if (sessionStatus === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6 py-8 sm:px-10">
+        <div className="text-center">
+          <Logo size={60} animated className="justify-center" />
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render login form if already authenticated (will redirect)
+  if (sessionStatus === "authenticated") {
+    return null;
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -20,24 +48,22 @@ export default function LoginPage() {
     setMessage("");
     
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
       });
       
-      const data = await res.json();
-      
-      if (!res.ok) {
-        throw new Error(data.error || "Login failed");
+      if (result?.error) {
+        throw new Error("Invalid credentials");
       }
       
       setStatus("success");
       setMessage("Login successful! Redirecting...");
       
-      // TODO: Redirect to dashboard after successful login
+      // Wait a moment and then redirect
       setTimeout(() => {
-        window.location.href = "/dashboard";
+        router.push("/dashboard");
       }, 1000);
       
     } catch (err: unknown) {

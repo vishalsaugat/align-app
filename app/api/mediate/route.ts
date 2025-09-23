@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAzure } from '@ai-sdk/azure';
 import { generateText } from 'ai';
+import { getToken } from 'next-auth/jwt';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export async function POST(req: NextRequest) {
   try {
-    const { message, conversation, participants } = await req.json();
+    // Check authentication
+    const token = await getToken({ req });
+    if (!token?.sub) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { message, conversation, participants, sessionId } = await req.json();
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    }
+
+    if (!participants?.user || !participants?.other) {
+      return NextResponse.json({ error: 'Participant names are required' }, { status: 400 });
     }
 
     // Build conversation context
@@ -48,8 +62,54 @@ Keep your response concise but thoughtful. Focus on moving the conversation forw
       prompt,
     });
 
+    // Create or update session in database
+    const userId = parseInt(token.sub!);
+    
+    // Verify user exists before creating session
+    const userExists = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    
+    if (!userExists) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    
+    const updatedMessages = [
+      ...conversation,
+      { role: 'user', content: message, sender: participants.user },
+      { role: 'mediator', content: result.text, sender: 'AI Mediator' }
+    ];
+
+    let session;
+    if (sessionId) {
+      // Update existing session
+      // @ts-ignore - TypeScript doesn't recognize mediationSession but it exists at runtime
+      session = await prisma.mediationSession.update({
+        where: { id: sessionId, userId },
+        data: {
+          messages: updatedMessages,
+          updatedAt: new Date(),
+        },
+      });
+    } else {
+      // Create new session
+      const title = `${participants.user} & ${participants.other}`;
+      // @ts-ignore - TypeScript doesn't recognize mediationSession but it exists at runtime
+      session = await prisma.mediationSession.create({
+        data: {
+          userId,
+          title,
+          participantUser: participants.user,
+          participantOther: participants.other,
+          messages: updatedMessages,
+        },
+      });
+    }
+
     return NextResponse.json({
       response: result.text,
+      sessionId: session.id,
       success: true
     });
 
@@ -65,8 +125,59 @@ Remember, the goal is to find a path forward that works for everyone involved.`;
 
     return NextResponse.json({
       response: fallbackResponse,
+      sessionId: null,
       success: true,
       fallback: true
     });
+  }
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    // Check authentication
+    const token = await getToken({ req });
+    if (!token?.sub) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = parseInt(token.sub!);
+    
+    // Verify user exists
+    const userExists = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+    
+    if (!userExists) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+    
+    // Get all mediation sessions for the user
+    // @ts-ignore - TypeScript doesn't recognize mediationSession but it exists at runtime
+    const sessions = await prisma.mediationSession.findMany({
+      where: { userId },
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        participantUser: true,
+        participantOther: true,
+        createdAt: true,
+        updatedAt: true,
+        messages: true,
+      },
+    });
+
+    return NextResponse.json({
+      sessions,
+      success: true
+    });
+
+  } catch (error) {
+    console.error('Error fetching mediation sessions:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch sessions' },
+      { status: 500 }
+    );
   }
 }

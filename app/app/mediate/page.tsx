@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import Logo from "../../components/Logo";
 
 type Message = {
@@ -12,12 +16,27 @@ type Message = {
   sender: string;
 };
 
+type MediationSession = {
+  id: number;
+  title: string;
+  participantUser: string;
+  participantOther: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: Message[];
+};
+
 export default function MediatePage() {
+  const { status } = useSession();
+  const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionStarted, setSessionStarted] = useState(false);
   const [participantNames, setParticipantNames] = useState({ user: '', other: '' });
+  const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
+  const [sessions, setSessions] = useState<MediationSession[]>([]);
+  const [showSessions, setShowSessions] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -25,8 +44,58 @@ export default function MediatePage() {
   };
 
   useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/");
+    } else if (status === "authenticated") {
+      loadSessions();
+    }
+  }, [status, router]);
+
+  useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const loadSessions = async () => {
+    try {
+      const response = await fetch('/api/mediate');
+      if (response.ok) {
+        const data = await response.json();
+        setSessions(data.sessions || []);
+      }
+    } catch (error) {
+      console.error('Failed to load sessions:', error);
+    }
+  };
+
+  const loadSession = (session: MediationSession) => {
+    const formattedMessages = session.messages.map((msg: { role: string; content: string; sender: string }) => ({
+      id: `${Date.now()}-${Math.random()}`,
+      role: msg.role as 'user' | 'other' | 'mediator',
+      content: msg.content,
+      timestamp: new Date(),
+      sender: msg.sender,
+    }));
+    setMessages(formattedMessages);
+    setParticipantNames({ user: session.participantUser, other: session.participantOther });
+    setCurrentSessionId(session.id);
+    setSessionStarted(true);
+    setShowSessions(false);
+  };
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <Logo size={48} animated />
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return null; // Will redirect in useEffect
+  }
 
   const startSession = () => {
     if (!participantNames.user || !participantNames.other) return;
@@ -74,7 +143,8 @@ ${participantNames.user}, would you like to start by sharing your perspective?`,
         body: JSON.stringify({
           message: currentMessage,
           conversation: messages,
-          participants: participantNames
+          participants: participantNames,
+          sessionId: currentSessionId
         }),
       });
 
@@ -93,6 +163,12 @@ ${participantNames.user}, would you like to start by sharing your perspective?`,
       };
 
       setMessages(prev => [...prev, mediatorMessage]);
+
+      // Update current session ID if this is a new session
+      if (data.sessionId && !currentSessionId) {
+        setCurrentSessionId(data.sessionId);
+        loadSessions(); // Refresh sessions list
+      }
 
     } catch (error) {
       console.error('Error getting mediation response:', error);
@@ -134,6 +210,14 @@ ${participantNames.user}, would you like to start by sharing your perspective?`,
                 </Link>
               </div>
               <div className="flex items-center space-x-4">
+                {sessions.length > 0 && (
+                  <button
+                    onClick={() => setShowSessions(!showSessions)}
+                    className="text-sm text-gray-600 hover:text-gray-700 transition"
+                  >
+                    {showSessions ? 'Hide' : 'Show'} History ({sessions.length})
+                  </button>
+                )}
                 <Link 
                   href="/dashboard"
                   className="text-sm text-gray-600 hover:text-gray-700 transition"
@@ -145,7 +229,40 @@ ${participantNames.user}, would you like to start by sharing your perspective?`,
           </div>
         </header>
 
-        <main className="max-w-2xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <main className="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8 flex">
+          {/* Sessions Sidebar */}
+          {showSessions && (
+            <div className="w-80 mr-6">
+              <div className="bg-white/70 backdrop-blur-sm border border-white/40 shadow-xl rounded-2xl p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+                <h3 className="font-semibold text-gray-900 mb-4">Previous Sessions</h3>
+                <div className="space-y-3">
+                  {sessions.map((session) => (
+                    <button
+                      key={session.id}
+                      onClick={() => loadSession(session)}
+                      className="w-full text-left p-3 rounded-xl bg-white/50 hover:bg-white/80 border border-white/40 hover:border-green-300 transition"
+                    >
+                      <div className="font-medium text-gray-900 text-sm mb-1 truncate">
+                        {session.title}
+                      </div>
+                      <div className="text-xs text-gray-500 mb-1">
+                        {session.participantUser} & {session.participantOther}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(session.updatedAt).toLocaleDateString()}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-1">
+                        {Array.isArray(session.messages) ? session.messages.length : 0} messages
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Main Content */}
+          <div className={`flex-1 ${showSessions ? 'max-w-4xl' : 'max-w-2xl mx-auto'}`}>
           <div className="text-center mb-8">
             <div className="w-20 h-20 bg-gradient-to-br from-green-100 to-teal-100 rounded-2xl flex items-center justify-center mb-6 mx-auto">
               <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -219,6 +336,7 @@ ${participantNames.user}, would you like to start by sharing your perspective?`,
               </Link>
             </div>
           </div>
+          </div>
         </main>
       </div>
     );
@@ -271,7 +389,28 @@ ${participantNames.user}, would you like to start by sharing your perspective?`,
                   <div className="text-xs font-medium mb-1 opacity-75">
                     {message.sender}
                   </div>
-                  <div className="whitespace-pre-wrap">{message.content}</div>
+                  {message.role === 'mediator' ? (
+                    <div className="text-sm prose prose-sm max-w-none">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          h1: ({children}) => <h1 className="text-base font-bold mt-2 mb-1">{children}</h1>,
+                          h2: ({children}) => <h2 className="text-sm font-semibold mt-2 mb-1">{children}</h2>,
+                          h3: ({children}) => <h3 className="text-sm font-semibold mt-2 mb-1">{children}</h3>,
+                          p: ({children}) => <p className="mb-2">{children}</p>,
+                          ul: ({children}) => <ul className="list-disc list-inside mb-2 space-y-1">{children}</ul>,
+                          ol: ({children}) => <ol className="list-decimal list-inside mb-2 space-y-1">{children}</ol>,
+                          li: ({children}) => <li>{children}</li>,
+                          strong: ({children}) => <strong className="font-semibold">{children}</strong>,
+                          em: ({children}) => <em className="italic">{children}</em>,
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="whitespace-pre-wrap">{message.content}</div>
+                  )}
                   <div className="text-xs mt-1 opacity-75">
                     {message.timestamp.toLocaleTimeString()}
                   </div>

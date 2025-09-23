@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone()
   const hostname = request.headers.get('host') || ''
   
@@ -30,7 +31,38 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(url)
   }
 
-  // Default behavior for main domain
+  // Auth protection logic
+  const { pathname } = request.nextUrl
+  
+  // Public routes that don't require authentication
+  const publicRoutes = ['/', '/api/waitlist', '/api/webhook', '/api/auth']
+  
+  // Auth routes (login page)
+  const authRoutes = ['/']
+  
+  // Check if the current path is public or starts with a public route
+  const isPublicRoute = publicRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  )
+  
+  if (isPublicRoute) {
+    return NextResponse.next()
+  }
+  
+  // Get the JWT token to check authentication
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET })
+  
+  // Check if user is trying to access auth pages while logged in
+  if (authRoutes.includes(pathname) && token) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+  
+  // Check if user is trying to access protected routes without auth
+  if (!token && !authRoutes.includes(pathname)) {
+    return NextResponse.redirect(new URL('/app', request.url))
+  }
+
+  // Default behavior
   return NextResponse.next()
 }
 

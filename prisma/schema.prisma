@@ -22,6 +22,8 @@ model User {
   job_descriptions job_descriptions[]
   settings         settings[]
   team_members     team_members[]
+  ventSessions     VentSession[]
+  mediationSessions MediationSession[]
 
   @@map("users")
 }
@@ -201,4 +203,30 @@ model whatsapp_messages {
   created_at          DateTime         @default(now()) @db.Timestamp(6)
   candidates          candidates       @relation(fields: [candidate_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "whatsapp_messages_candidate_id_candidates_id_fk")
   job_descriptions    job_descriptions @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "whatsapp_messages_job_id_job_descriptions_id_fk")
+}
+
+model VentSession {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  title       String?  @db.VarChar(200)
+  messages    Json     @default("[]") @db.Json
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("vent_sessions")
+}
+
+model MediationSession {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @map("user_id")
+  title           String?  @db.VarChar(200)
+  participantUser String   @map("participant_user") @db.VarChar(100)
+  participantOther String  @map("participant_other") @db.VarChar(100)
+  messages        Json     @default("[]") @db.Json
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mediation_sessions")
 }

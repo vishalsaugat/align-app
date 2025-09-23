@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import ClientSessionProvider from "../components/SessionProvider";
 import "../globals.css";
 
 const geistSans = Geist({
@@ -33,9 +34,11 @@ export default function AppLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-          {children}
-        </div>
+        <ClientSessionProvider>
+          <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+            {children}
+          </div>
+        </ClientSessionProvider>
       </body>
     </html>
   );
