@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -20,10 +20,10 @@ type VentSession = {
   title: string;
   createdAt: string;
   updatedAt: string;
-  messages: Message[];
+  messages: { role: string; content: string }[];
 };
 
-export default function VentPage() {
+function VentPageContent() {
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -377,5 +377,24 @@ export default function VentPage() {
         </button>
       )}
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
+      <div className="text-center">
+        <Logo size={48} animated />
+        <p className="mt-4 text-gray-600">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function VentPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <VentPageContent />
+    </Suspense>
   );
 }

@@ -84,7 +84,6 @@ Keep your response concise but thoughtful. Focus on moving the conversation forw
     let session;
     if (sessionId) {
       // Update existing session
-      // @ts-ignore - TypeScript doesn't recognize mediationSession but it exists at runtime
       session = await prisma.mediationSession.update({
         where: { id: sessionId, userId },
         data: {
@@ -95,7 +94,6 @@ Keep your response concise but thoughtful. Focus on moving the conversation forw
     } else {
       // Create new session
       const title = `${participants.user} & ${participants.other}`;
-      // @ts-ignore - TypeScript doesn't recognize mediationSession but it exists at runtime
       session = await prisma.mediationSession.create({
         data: {
           userId,
@@ -153,7 +151,6 @@ export async function GET(req: NextRequest) {
     }
     
     // Get all mediation sessions for the user
-    // @ts-ignore - TypeScript doesn't recognize mediationSession but it exists at runtime
     const sessions = await prisma.mediationSession.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },

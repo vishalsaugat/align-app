@@ -87,7 +87,6 @@ Be empathetic, supportive, and ask follow-up questions to deepen understanding. 
     let session;
     if (sessionId) {
       // Update existing session
-      // @ts-expect-error - TypeScript doesn't recognize ventSession but it exists at runtime
       session = await prisma.ventSession.update({
         where: { id: sessionId, userId },
         data: {
@@ -98,7 +97,6 @@ Be empathetic, supportive, and ask follow-up questions to deepen understanding. 
     } else {
       // Create new session
       const title = message.length > 50 ? message.substring(0, 50) + '...' : message;
-      // @ts-expect-error - TypeScript doesn't recognize ventSession but it exists at runtime
       session = await prisma.ventSession.create({
         data: {
           userId,
@@ -143,7 +141,7 @@ I'm here to help you work through this. What specific aspect would you like to e
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     // Check authentication - temporarily disabled for testing
     // const token = await getToken({ req });
@@ -157,7 +155,6 @@ export async function GET(req: NextRequest) {
     const userId = parseInt(token.sub!);
     
     // Test if Prisma types are working
-    // @ts-expect-error - TypeScript doesn't recognize ventSession but it exists at runtime
     const sessions = await prisma.ventSession.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
