@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { InlineLoading } from "./components/Loading";
 
 export default function WaitlistForm() {
   const [email, setEmail] = useState("");
@@ -55,9 +56,15 @@ export default function WaitlistForm() {
         <button
           type="submit"
             disabled={status === "loading" || status === "success"}
-          className="rounded-xl px-6 py-3 text-sm sm:text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow hover:from-blue-700 hover:to-purple-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
+          className="rounded-xl px-6 py-3 text-sm sm:text-base font-semibold text-white bg-gradient-to-r from-blue-600 to-purple-600 shadow hover:from-blue-700 hover:to-purple-700 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center justify-center min-h-[3rem]"
         >
-          {status === "loading" ? "Joining..." : status === "success" ? "Joined" : "Join"}
+          {status === "loading" ? (
+            <InlineLoading message="Joining..." />
+          ) : status === "success" ? (
+            "Joined"
+          ) : (
+            "Join"
+          )}
         </button>
       </div>
       <div className="min-h-[20px] text-sm" aria-live="polite" role="status">

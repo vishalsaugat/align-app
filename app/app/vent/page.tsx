@@ -7,6 +7,7 @@ import Link from "next/link";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Logo from "../../components/Logo";
+import { PageLoading, InlineLoading } from "../../components/Loading";
 
 type Message = {
   id: string;
@@ -97,14 +98,7 @@ function VentPageContent() {
 
   // Loading screen
   if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <Logo size={48} animated />
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return <PageLoading />;
   }
 
   // Redirect if unauthenticated
@@ -315,10 +309,7 @@ function VentPageContent() {
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-white/70 border border-white/40 shadow-sm rounded-2xl px-4 py-3">
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-gray-600">AI is thinking...</span>
-                </div>
+                <InlineLoading message="AI is thinking..." />
               </div>
             </div>
           )}
@@ -381,14 +372,7 @@ function VentPageContent() {
 }
 
 function LoadingFallback() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
-      <div className="text-center">
-        <Logo size={48} animated />
-        <p className="mt-4 text-gray-600">Loading...</p>
-      </div>
-    </div>
-  );
+  return <PageLoading />;
 }
 
 export default function VentPage() {

@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Logo from "../../components/Logo";
+import { PageLoading, MinimalLoading } from "../../components/Loading";
 
 type VentSession = {
   id: number;
@@ -58,14 +59,7 @@ export default function Dashboard() {
   };
 
   if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <Logo size={48} animated />
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return <PageLoading />;
   }
 
   if (status === "unauthenticated") {
@@ -196,8 +190,7 @@ export default function Dashboard() {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Vent Sessions</h2>
           {isLoadingSessions ? (
             <div className="bg-white/30 backdrop-blur-sm rounded-2xl p-8 border border-white/40 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading sessions...</p>
+              <MinimalLoading message="Loading sessions..." />
             </div>
           ) : ventSessions.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

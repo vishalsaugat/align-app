@@ -7,6 +7,7 @@ import Link from "next/link";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Logo from "../../components/Logo";
+import { PageLoading, InlineLoading } from "../../components/Loading";
 
 type Message = {
   id: string;
@@ -83,14 +84,7 @@ export default function MediatePage() {
   };
 
   if (status === "loading") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex items-center justify-center">
-        <div className="text-center">
-          <Logo size={48} animated />
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
+    return <PageLoading />;
   }
 
   if (status === "unauthenticated") {
@@ -420,10 +414,7 @@ ${participantNames.user}, would you like to start by sharing your perspective?`,
             {isLoading && (
               <div className="flex justify-start">
                 <div className="bg-green-100 text-green-900 border border-green-200 px-4 py-3 rounded-2xl">
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-                    <span>AI Mediator is thinking...</span>
-                  </div>
+                  <InlineLoading message="AI Mediator is thinking..." />
                 </div>
               </div>
             )}
